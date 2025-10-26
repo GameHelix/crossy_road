@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaNeon } from '@prisma/adapter-neon'
-import { Pool, neonConfig } from '@neondatabase/serverless'
+import { neonConfig } from '@neondatabase/serverless'
 
 // Configure Neon for serverless
 // Only use ws in development (Node.js environment)
@@ -23,10 +23,8 @@ const prismaClientSingleton = () => {
 
   console.log('Creating Prisma client with Neon adapter, connection string exists:', !!connectionString)
 
-  // Create Neon connection pool with explicit configuration
-  const pool = new Pool({ connectionString })
-
-  const adapter = new PrismaNeon(pool as any)
+  // Create Neon adapter with connection string directly
+  const adapter = new PrismaNeon({ connectionString })
 
   return new PrismaClient({
     adapter: adapter as any,
