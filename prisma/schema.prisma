@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["libra"]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String
+  role          Role      @default(MEMBER)
+  member        Member?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+  @@schema("libra")
+}
+
+model Member {
+  id          String      @id @default(cuid())
+  userId      String      @unique
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  phone       String?
+  address     String?
+  membershipDate DateTime @default(now())
+  status      MemberStatus @default(ACTIVE)
+  borrowings  Borrowing[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("members")
+  @@schema("libra")
+}
+
+model Book {
+  id          String      @id @default(cuid())
+  title       String
+  author      String
+  isbn        String      @unique
+  publisher   String?
+  publishedYear Int?
+  category    String?
+  description String?     @db.Text
+  quantity    Int         @default(1)
+  available   Int         @default(1)
+  imageUrl    String?
+  borrowings  Borrowing[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("books")
+  @@schema("libra")
+}
+
+model Borrowing {
+  id          String      @id @default(cuid())
+  memberId    String
+  member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  bookId      String
+  book        Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  borrowDate  DateTime    @default(now())
+  dueDate     DateTime
+  returnDate  DateTime?
+  status      BorrowStatus @default(BORROWED)
+  fine        Float       @default(0)
+  notes       String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("borrowings")
+  @@schema("libra")
+}
+
+enum Role {
+  ADMIN
+  LIBRARIAN
+  MEMBER
+
+  @@schema("libra")
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+
+  @@schema("libra")
+}
+
+enum BorrowStatus {
+  BORROWED
+  RETURNED
+  OVERDUE
+
+  @@schema("libra")
+}
