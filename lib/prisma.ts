@@ -5,24 +5,28 @@ import { Pool, neonConfig } from '@neondatabase/serverless'
 // Configure Neon for serverless
 // Only use ws in development (Node.js environment)
 // In production (Vercel), use native WebSocket
-if (process.env.NODE_ENV === 'development') {
-  const ws = require('ws')
-  neonConfig.webSocketConstructor = ws
+if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
+  neonConfig.webSocketConstructor = require('ws')
 }
 
 const prismaClientSingleton = () => {
-  const connectionString = process.env.DATABASE_URL
-
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is not defined')
+  // Ensure DATABASE_URL is available
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      'DATABASE_URL environment variable is not set. ' +
+      'Please add it to your .env file locally or in Vercel environment variables.'
+    )
   }
 
-  // Always use Neon adapter for serverless compatibility
-  const pool = new Pool({ connectionString })
-  const adapter = new PrismaNeon(pool as any)
+  // Create Neon connection pool with explicit configuration
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL
+  })
+
+  const adapter = new PrismaNeon(pool)
 
   return new PrismaClient({
-    adapter: adapter as any,
+    adapter,
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   })
 }
