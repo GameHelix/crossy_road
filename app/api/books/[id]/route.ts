@@ -18,7 +18,7 @@ const bookSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -26,8 +26,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const book = await prisma.book.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         borrowings: {
           include: {
@@ -64,7 +65,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -72,11 +73,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const validatedData = bookSchema.parse(body);
 
     const book = await prisma.book.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     });
 
@@ -84,7 +86,7 @@ export async function PUT(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid input', details: error.errors },
+        { error: 'Invalid input', details: error.issues },
         { status: 400 }
       );
     }
@@ -99,7 +101,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -107,10 +109,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     // Check if book has active borrowings
     const activeBorrowings = await prisma.borrowing.count({
       where: {
-        bookId: params.id,
+        bookId: id,
         status: 'BORROWED',
       },
     });
@@ -123,7 +126,7 @@ export async function DELETE(
     }
 
     await prisma.book.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Book deleted successfully' });
