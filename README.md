@@ -1,224 +1,522 @@
 # Libra - Library Management System
 
-A modern, full-stack library management system built with Next.js 16, TypeScript, Prisma, and Neon PostgreSQL.
+A modern library management system built with Next.js 16, Prisma ORM, and Neon PostgreSQL. Libra provides comprehensive features for managing books, members, and borrowing operations with role-based access control.
 
 ## Features
 
-- **Authentication & Authorization**: Secure user authentication with NextAuth.js
-- **Book Management**: Complete CRUD operations for managing book catalog
-- **Member Management**: Track library members and their information
-- **Borrowing System**: Track book checkouts, returns, and due dates
-- **Dashboard**: Overview statistics and recent activities
-- **Search & Filter**: Quick search across books by title, author, ISBN, and category
-- **Responsive Design**: Beautiful UI built with Tailwind CSS and shadcn/ui components
+- **Role-Based Access Control**: Three distinct user roles (Admin, Librarian, Member)
+- **Book Management**: Complete CRUD operations for books with categories and availability tracking
+- **Member Management**: Track member information, status, and borrowing history
+- **Borrowing System**: Manage book checkouts, returns, and overdue tracking with fines
+- **Authentication**: Secure authentication using NextAuth.js v5
+- **Modern UI**: Responsive design with Tailwind CSS and Radix UI components
+- **Serverless Database**: Powered by Neon PostgreSQL with connection pooling
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **Database**: Neon PostgreSQL (using `libra` schema)
-- **ORM**: Prisma
-- **Authentication**: NextAuth.js v5
-- **UI Components**: shadcn/ui
-- **Styling**: Tailwind CSS v4
-- **Form Validation**: Zod
+- **Frontend**: Next.js 16 (App Router), React 19, TypeScript
+- **Backend**: Next.js API Routes, NextAuth.js v5
+- **Database**: Neon PostgreSQL (serverless)
+- **ORM**: Prisma with Neon adapter
+- **UI Components**: Radix UI, Tailwind CSS
+- **Form Handling**: React Hook Form with Zod validation
 - **Deployment**: Vercel
+
+## User Roles & Permissions
+
+### Admin
+The system administrator with full access to all features.
+
+**Capabilities:**
+- ✅ Full access to all system features
+- ✅ Manage users (create, update, delete, change roles)
+- ✅ Manage all books (add, edit, delete)
+- ✅ Manage all members (view, create, update, suspend)
+- ✅ Process all borrowing operations
+- ✅ View system-wide statistics and reports
+- ✅ Configure system settings
+
+**User Flow:**
+1. Log in with admin credentials
+2. Access admin dashboard with full navigation
+3. Manage users, books, members, and borrowings
+4. View analytics and reports
+5. Configure system settings
+
+### Librarian
+Staff member responsible for day-to-day library operations.
+
+**Capabilities:**
+- ✅ Manage books (add, edit, update availability)
+- ✅ Manage members (view, create, update status)
+- ✅ Process borrowing operations (checkout, return)
+- ✅ Calculate and record fines
+- ✅ View borrowing history and statistics
+- ❌ Cannot manage users or change roles
+- ❌ Cannot delete books or members
+
+**User Flow:**
+1. Log in with librarian credentials
+2. Access librarian dashboard
+3. Check out books to members
+4. Process book returns
+5. Update member statuses
+6. Add new books to inventory
+7. View borrowing statistics
+
+### Member
+Library patron who can borrow books.
+
+**Capabilities:**
+- ✅ View available books and browse catalog
+- ✅ View personal borrowing history
+- ✅ View current borrowed books
+- ✅ View personal fines and dues
+- ✅ Update personal profile information
+- ❌ Cannot access administrative features
+- ❌ Cannot view other members' information
+
+**User Flow:**
+1. Register for an account or log in
+2. Browse available books
+3. Request books (librarian processes)
+4. View borrowed books and due dates
+5. Check fines and borrowing history
+6. Update profile information
 
 ## Database Schema
 
-The application uses a **`libra`** schema in PostgreSQL with the following models:
+### User
+Stores authentication and role information.
+```prisma
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String
+  role          Role      @default(MEMBER)
+  member        Member?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+```
 
-- **User**: Authentication and user information
-- **Member**: Library member details
-- **Book**: Book catalog with availability tracking
-- **Borrowing**: Book checkout and return records
+### Member
+Extended profile for library members.
+```prisma
+model Member {
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  user           User          @relation(...)
+  firstName      String
+  lastName       String
+  phone          String?
+  address        String?
+  membershipDate DateTime      @default(now())
+  status         MemberStatus  @default(ACTIVE)
+  borrowings     Borrowing[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+```
 
-All tables are created in the `libra` schema in your Neon PostgreSQL database.
+### Book
+Book inventory and availability tracking.
+```prisma
+model Book {
+  id            String      @id @default(cuid())
+  title         String
+  author        String
+  isbn          String      @unique
+  publisher     String?
+  publishedYear Int?
+  category      String?
+  description   String?
+  quantity      Int         @default(1)
+  available     Int         @default(1)
+  imageUrl      String?
+  borrowings    Borrowing[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+```
 
-### User Roles
+### Borrowing
+Tracks book checkouts and returns.
+```prisma
+model Borrowing {
+  id         String       @id @default(cuid())
+  memberId   String
+  member     Member       @relation(...)
+  bookId     String
+  book       Book         @relation(...)
+  borrowDate DateTime     @default(now())
+  dueDate    DateTime
+  returnDate DateTime?
+  status     BorrowStatus @default(BORROWED)
+  fine       Float        @default(0)
+  notes      String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+```
 
-- **ADMIN**: Full system access
-- **LIBRARIAN**: Manage books and borrowings
-- **MEMBER**: View catalog and personal borrowings
+### Enums
+```prisma
+enum Role {
+  ADMIN
+  LIBRARIAN
+  MEMBER
+}
 
-## Prerequisites
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
 
-- Node.js 18+
-- npm or yarn
-- Neon PostgreSQL database (or any PostgreSQL database)
-
-## Environment Variables
-
-The `.env` file is already configured with your Neon PostgreSQL connection:
-
-```env
-DATABASE_URL=postgresql://tg_db_owner:...@ep-frosty-voice-a2s9itd4-pooler.eu-central-1.aws.neon.tech/tg_db?sslmode=require&channel_binding=require
-NEXTAUTH_SECRET=your-nextauth-secret-change-this-in-production
-NEXTAUTH_URL=http://localhost:3000
+enum BorrowStatus {
+  BORROWED
+  RETURNED
+  OVERDUE
+}
 ```
 
 ## Getting Started
 
-The project is already set up and running! Here's what's been done:
+### Prerequisites
 
-1. **Dependencies installed** ✓
-2. **Database configured** ✓ (using `libra` schema in Neon)
-3. **Migrations run** ✓
-4. **Development server running** ✓ at `http://localhost:3002`
+- Node.js 18+ and npm
+- Neon PostgreSQL database account
 
-### To start developing:
+### Installation
 
-1. **Register a new account** at `http://localhost:3002/register`
-2. **Login** with your credentials
-3. **Access the dashboard** to start managing your library
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd libra
+```
 
-## Usage
+2. **Install dependencies**
+```bash
+npm install
+```
 
-### Managing Books
+3. **Set up environment variables**
 
-1. Navigate to **Books** from the sidebar
-2. Click **Add Book** to add a new book to the catalog
-3. Use the search bar to find books by title, author, ISBN, or category
-4. Click **Edit** to update book information
-5. Click **Delete** to remove a book (only if no active borrowings)
+Create a `.env` file in the root directory:
 
-### Managing Members
+```env
+# Database (Neon PostgreSQL)
+DATABASE_URL="postgresql://user:password@ep-name-pooler.region.aws.neon.tech/dbname?sslmode=require"
 
-- Navigate to **Members** to view all registered members
-- View member details including contact information and membership status
+# NextAuth.js
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
+```
 
-### Managing Borrowings
+**To generate NEXTAUTH_SECRET:**
+```bash
+openssl rand -base64 32
+```
 
-- Navigate to **Borrowings** to view all borrowing records
-- Track active borrowings, due dates, and overdue books
-- View return history
+4. **Set up the database**
+
+```bash
+# Generate Prisma Client
+npx prisma generate
+
+# Run database migrations
+npx prisma migrate deploy
+
+# Seed the database with example data
+npm run db:seed
+```
+
+5. **Start the development server**
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000`
+
+## Seeding the Database
+
+The seed script creates example data for testing:
+
+```bash
+npm run db:seed
+```
+
+### Sample Accounts Created:
+
+**Admin Account:**
+- Email: `admin@libra.com`
+- Password: `password123`
+- Role: ADMIN
+
+**Librarian Account:**
+- Email: `librarian@libra.com`
+- Password: `password123`
+- Role: LIBRARIAN
+
+**Member Accounts:**
+- Email: `john.doe@example.com` - Password: `password123` (Active)
+- Email: `sarah.johnson@example.com` - Password: `password123` (Active)
+- Email: `mike.wilson@example.com` - Password: `password123` (Suspended)
+
+**Books Created:**
+- The Great Gatsby
+- To Kill a Mockingbird
+- 1984
+- The Catcher in the Rye
+- Pride and Prejudice
+- The Hobbit
+- Clean Code
+- Sapiens
+
+**Borrowings Created:**
+- Active borrowings
+- Overdue borrowings with fines
+- Returned borrowings
+
+## Creating an Admin Account
+
+### Method 1: Using the Seed Script
+The easiest way is to use the seed script which creates an admin account automatically:
+
+```bash
+npm run db:seed
+```
+
+Then log in with:
+- Email: `admin@libra.com`
+- Password: `password123`
+
+### Method 2: Manual Database Update
+If you already have a user account and want to make it an admin:
+
+1. **Using Prisma Studio:**
+```bash
+npx prisma studio
+```
+- Navigate to the `User` model
+- Find your user
+- Change the `role` field to `ADMIN`
+- Save
+
+2. **Using SQL:**
+```sql
+UPDATE "libra"."users"
+SET role = 'ADMIN'
+WHERE email = 'your-email@example.com';
+```
+
+### Method 3: Create via Code
+Add this temporary API route at `/app/api/create-admin/route.ts`:
+
+```typescript
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
+
+export async function POST() {
+  const hashedPassword = await bcrypt.hash('your-password', 10)
+
+  const admin = await prisma.user.create({
+    data: {
+      email: 'admin@yourdomain.com',
+      password: hashedPassword,
+      name: 'Admin User',
+      role: 'ADMIN',
+    },
+  })
+
+  return NextResponse.json({ success: true, admin })
+}
+```
+
+Visit `/api/create-admin` once, then delete the file.
+
+## Deployment to Vercel
+
+### 1. Push to GitHub
+```bash
+git add .
+git commit -m "Initial commit"
+git push origin main
+```
+
+### 2. Connect to Vercel
+- Go to [Vercel](https://vercel.com)
+- Import your repository
+- Configure the project
+
+### 3. Add Environment Variables
+In Vercel Project Settings → Environment Variables:
+
+```
+DATABASE_URL=postgresql://user:password@ep-name-pooler.region.aws.neon.tech/dbname?sslmode=require
+NEXTAUTH_SECRET=<your-secret-key>
+NEXTAUTH_URL=https://your-app.vercel.app
+```
+
+**Important:**
+- Use the pooled connection string from Neon (with `-pooler` in the hostname)
+- Add environment variables for Production, Preview, and Development
+- Generate a new NEXTAUTH_SECRET for production
+
+### 4. Deploy
+Vercel will automatically deploy your application.
+
+### 5. Seed Production Database
+After deployment, seed your production database:
+
+```bash
+# Option 1: Run locally against production DB
+DATABASE_URL="your-production-url" npm run db:seed
+
+# Option 2: Create a temporary API route (see Method 3 above)
+```
+
+## Available Scripts
+
+```bash
+# Development
+npm run dev          # Start development server
+
+# Building
+npm run build        # Build for production
+npm start            # Start production server
+
+# Database
+npx prisma migrate dev        # Create and apply migrations
+npx prisma migrate deploy     # Apply migrations (production)
+npx prisma generate          # Generate Prisma Client
+npx prisma studio           # Open Prisma Studio
+npm run db:seed            # Seed database with example data
+npm run db:reset          # Reset database and re-seed
+
+# Code Quality
+npm run lint         # Run ESLint
+```
 
 ## Project Structure
 
 ```
 libra/
-├── app/
-│   ├── api/                # API routes
-│   │   ├── auth/          # Authentication endpoints
-│   │   └── books/         # Books CRUD endpoints
-│   ├── dashboard/         # Dashboard pages
-│   │   ├── books/        # Books management (full CRUD)
-│   │   ├── members/      # Members management
-│   │   └── borrowings/   # Borrowings management
-│   ├── login/            # Login page
-│   ├── register/         # Registration page
-│   └── page.tsx          # Home page (redirects)
-├── components/
-│   ├── ui/               # shadcn/ui components
-│   └── sidebar.tsx       # Navigation sidebar
-├── lib/
-│   ├── prisma.ts         # Prisma client singleton
-│   ├── actions.ts        # Server actions
-│   └── utils.ts          # Utility functions
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   │   ├── auth/         # NextAuth.js routes
+│   │   └── ...           # Other API endpoints
+│   ├── dashboard/        # Dashboard pages
+│   ├── books/           # Book management
+│   ├── members/        # Member management
+│   ├── borrowings/    # Borrowing operations
+│   └── ...
+├── components/          # React components
+│   ├── ui/            # Reusable UI components
+│   └── ...
+├── lib/              # Utility functions
+│   ├── prisma.ts    # Prisma client
+│   └── auth.ts     # Auth configuration
 ├── prisma/
-│   ├── schema.prisma     # Database schema (libra schema)
-│   └── migrations/       # Database migrations
-├── auth.ts               # NextAuth configuration
-├── auth.config.ts        # NextAuth config
-└── middleware.ts         # Route protection
+│   ├── schema.prisma  # Database schema
+│   ├── seed.ts       # Seed script
+│   └── migrations/  # Database migrations
+└── public/        # Static assets
 ```
 
-## API Endpoints
+## Key Features Explained
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/[...nextauth]` - NextAuth endpoints
+### Authentication Flow
+1. User registers or logs in via `/login` or `/register`
+2. NextAuth.js validates credentials
+3. Session is created with user role
+4. Middleware protects routes based on role
+5. Client can access user session via `useSession()`
 
-### Books
-- `GET /api/books` - Get all books (with optional search)
-- `POST /api/books` - Create a new book
-- `GET /api/books/[id]` - Get book by ID
-- `PUT /api/books/[id]` - Update book
-- `DELETE /api/books/[id]` - Delete book
+### Borrowing Workflow
+1. **Checkout:**
+   - Librarian/Admin selects member and book
+   - System checks book availability
+   - Creates borrowing record
+   - Decrements available count
+   - Sets due date (typically 14 days)
 
-## Database Commands
+2. **Return:**
+   - Librarian/Admin processes return
+   - System checks if overdue
+   - Calculates fine if applicable
+   - Updates borrowing status
+   - Increments available count
 
+3. **Overdue Handling:**
+   - System identifies overdue books
+   - Calculates fines (e.g., $0.50/day)
+   - Updates borrowing status to OVERDUE
+   - Displays in member and librarian dashboards
+
+### Fine Calculation
+```typescript
+const daysOverdue = Math.floor(
+  (new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+)
+const fine = daysOverdue * 0.50 // $0.50 per day
+```
+
+## Troubleshooting
+
+### Database Connection Issues
+- Verify DATABASE_URL is correct and uses pooled connection (`-pooler`)
+- Check Neon database is not suspended
+- Ensure `.env` file is in root directory
+
+### Authentication Issues
+- Verify NEXTAUTH_SECRET is set
+- Check NEXTAUTH_URL matches your domain
+- Clear cookies and try again
+
+### Build Errors
 ```bash
-# Create a new migration
-npx prisma migrate dev --name migration_name
+# Clean and rebuild
+rm -rf .next node_modules
+npm install
+npm run build
+```
+
+### Prisma Issues
+```bash
+# Regenerate Prisma Client
+npx prisma generate
 
 # Reset database
-npx prisma migrate reset
-
-# Open Prisma Studio (Database GUI)
-npx prisma studio
-
-# Generate Prisma Client
-npx prisma generate
+npm run db:reset
 ```
 
-## Development
+## Contributing
 
-```bash
-# Start development server (already running!)
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Lint code
-npm run lint
-```
-
-## Deployment to Vercel
-
-1. **Push your code to GitHub**
-
-2. **Import to Vercel**:
-   - Go to [vercel.com](https://vercel.com)
-   - Import your repository
-
-3. **Set environment variables** in Vercel:
-   - `DATABASE_URL` (your Neon PostgreSQL connection string)
-   - `NEXTAUTH_SECRET` (generate a secure random string)
-   - `NEXTAUTH_URL` (your production URL, e.g., https://libra.vercel.app)
-
-4. **Deploy**: Vercel will automatically deploy your application
-
-### Post-Deployment
-
-After deploying, ensure migrations are applied:
-```bash
-npx prisma migrate deploy
-```
-
-## What's Working
-
-✅ Authentication (Login/Register)
-✅ Dashboard with statistics
-✅ Books management (full CRUD)
-✅ Members list
-✅ Borrowings list
-✅ Search functionality
-✅ Responsive design
-
-## Future Enhancements
-
-- [ ] Complete Members CRUD operations
-- [ ] Borrowing/Return functionality with due date tracking
-- [ ] Fine calculation system
-- [ ] Email notifications for due dates
-- [ ] Book recommendations
-- [ ] Advanced reporting and analytics
-- [ ] Barcode scanning
-- [ ] Multi-library support
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-ISC
+This project is licensed under the MIT License.
 
-## Database Schema Details
+## Support
 
-All models use the `libra` schema in your Neon PostgreSQL database:
-- Tables: `users`, `members`, `books`, `borrowings`
-- Enums: `Role`, `MemberStatus`, `BorrowStatus`
+For issues and questions:
+- Open an issue on GitHub
+- Email: support@libra.com
 
-You can verify this in `prisma/schema.prisma` where each model has `@@schema("libra")`.
+## Acknowledgments
+
+- Built with [Next.js](https://nextjs.org/)
+- Database by [Neon](https://neon.tech/)
+- UI components from [Radix UI](https://www.radix-ui.com/)
+- Icons from [Lucide](https://lucide.dev/)
