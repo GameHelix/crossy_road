@@ -1,10 +1,14 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaNeon } from '@prisma/adapter-neon'
 import { Pool, neonConfig } from '@neondatabase/serverless'
-import ws from 'ws'
 
 // Configure Neon for serverless
-neonConfig.webSocketConstructor = ws
+// Only use ws in development (Node.js environment)
+// In production (Vercel), use native WebSocket
+if (process.env.NODE_ENV === 'development') {
+  const ws = require('ws')
+  neonConfig.webSocketConstructor = ws
+}
 
 const prismaClientSingleton = () => {
   const connectionString = process.env.DATABASE_URL
