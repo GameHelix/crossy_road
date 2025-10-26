@@ -10,18 +10,21 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
 }
 
 const prismaClientSingleton = () => {
+  const connectionString = process.env.DATABASE_URL
+
   // Ensure DATABASE_URL is available
-  if (!process.env.DATABASE_URL) {
+  if (!connectionString) {
+    console.error('DATABASE_URL is not set. Available env vars:', Object.keys(process.env))
     throw new Error(
       'DATABASE_URL environment variable is not set. ' +
       'Please add it to your .env file locally or in Vercel environment variables.'
     )
   }
 
+  console.log('Creating Prisma client with Neon adapter, connection string exists:', !!connectionString)
+
   // Create Neon connection pool with explicit configuration
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
-  })
+  const pool = new Pool({ connectionString })
 
   const adapter = new PrismaNeon(pool as any)
 
