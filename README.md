@@ -2,6 +2,28 @@
 
 A modern library management system built with Next.js 16, Prisma ORM, and Neon PostgreSQL. Libra provides comprehensive features for managing books, members, and borrowing operations with role-based access control.
 
+## Screenshots
+
+### Landing Page
+![Landing Page](./screenshots/landing%20page.png)
+*Modern, responsive landing page with call-to-action buttons and feature highlights*
+
+### Admin Dashboard
+![Admin Dashboard](./screenshots/admin%20dashboard.png)
+*Comprehensive dashboard with statistics cards showing total books, members, active borrowings, and overdue books*
+
+### Book Management
+![Books](./screenshots/books.png)
+*Full CRUD interface for managing the book catalog with search functionality*
+
+### Members
+![Members](./screenshots/members.png)
+*Member management interface showing member profiles and status*
+
+### Borrowings
+![Borrowings](./screenshots/borrowings.png)
+*Track all borrowing records with status indicators and fine calculations*
+
 ## Features
 
 - **Role-Based Access Control**: Three distinct user roles (Admin, Librarian, Member)
