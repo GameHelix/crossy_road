@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* ── Base resets ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0d1a;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* ── Neon glow utilities ─────────────────────────────────────────────────── */
+.neon-green  { text-shadow: 0 0 12px #00ffaa, 0 0 30px #00ffaa44; }
+.neon-purple { text-shadow: 0 0 12px #7700ff, 0 0 30px #7700ff44; }
+.neon-red    { text-shadow: 0 0 12px #ff003c, 0 0 30px #ff003c44; }
